@@ -352,14 +352,34 @@ namespace EPPlusTest.Drawing.Chart
 
             //Add a specific datalabel to the first column in the cluster
             var dl = label.DataLabels.Add(0);
+            var dl2 = label.DataLabels.Add(1);
+
+            dl.Layout.ManualLayout.Left = -30;
 
             //Offset the data label 10% of the charts width to the left
             //AKA Remove 10 from x coordinate
             dl.Layout.ManualLayout.Left = -10;
 
+            label.ShowCategory = true;
+
             //Offset the data label 10% of the charts height to the top
             //AKA remove 10 from y coordinate
             dl.Layout.ManualLayout.Top = -10;
+
+            //You can think of Series[x] where X defines the 'color' or position within each cluster
+            //And .DataLabel.DataLabels[y] as the cluster number
+
+            //I want the data label in the first cluster on the first column:
+            var firstClusterFirstColum = sChart.Series[0].DataLabel.DataLabels[0];
+
+            firstClusterFirstColum.Fill.Color = Color.LightBlue;
+
+            //I want the data label in the second cluster on the second column
+            var secondClusterSecondColumn = sChart.Series[1].DataLabel.DataLabels.Add(1);
+
+            secondClusterSecondColumn.Layout.ManualLayout.Left = 10;
+
+            secondClusterSecondColumn.Fill.Color = Color.DarkOrange;
         }
     }
 }
