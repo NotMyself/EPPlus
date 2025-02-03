@@ -1,6 +1,11 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OfficeOpenXml;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using OfficeOpenXml.Drawing;
+using OfficeOpenXml.FormulaParsing.Excel.Functions.MathFunctions;
+using OfficeOpenXml.Drawing.Chart;
 
 namespace EPPlusTest.Core
 {
@@ -115,5 +120,85 @@ namespace EPPlusTest.Core
             }
         }
 
+        public void DeleteColumnFromSeries(ExcelWorksheet ws, ExcelChartSerie serie, int deletedColumn)
+        {
+            if(serie.HeaderAddress != null)
+            {
+                serie.HeaderAddress = ws.Cells[UpdateSerieString(ws, serie.HeaderAddress.Address, deletedColumn)];
+            }
+            serie.Series = UpdateSerieString(ws, serie.Series, deletedColumn);
+            serie.XSeries = UpdateSerieString(ws, serie.XSeries, deletedColumn);
+        }
+
+        public string UpdateSerieString(ExcelWorksheet ws, string serieString, int deletedColumn)
+        {
+            string updatedString = serieString;
+
+            if (!string.IsNullOrEmpty(serieString))
+            {
+                var newSerieString = DeleteColumnFromAddress(ws, new ExcelAddress(serieString), deletedColumn);
+
+                if (newSerieString != null)
+                {
+                    updatedString = newSerieString;
+                }
+            }
+
+            return updatedString;
+        }
+
+        public string DeleteColumnFromAddress(ExcelWorksheet ws, ExcelAddressBase address, int deletedColumn)
+        {
+            if(address != null)
+            {
+                if (address.Start.Column > deletedColumn)
+                {
+                    var start = address.Start;
+                    var end = address.End;
+
+                    var newAddress = ws.Cells[start.Row, start.Column - 1, end.Row, end.Column - 1];
+                    return newAddress.FullAddressAbsolute;
+                }
+                return address.Address;
+            }
+            return null;
+        }
+
+
+        [TestMethod]
+        public void ColumnCheck()
+        {
+            using (var p = OpenTemplatePackage("s808_2.xlsx"))
+            {
+                var ws = p.Workbook.Worksheets["overzicht"];
+                List<ExcelRangeColumn> cols = [.. ws.Columns.Where(c => c.Hidden).OrderByDescending(c => c.StartColumn)];
+
+                List<int> deletedCols = new();
+
+                foreach (ExcelRangeColumn col in cols)
+                {
+                    ws.DeleteColumn(col.StartColumn);
+                    deletedCols.Add(col.StartColumn);
+                }
+
+                foreach (var drawing in ws.Drawings)
+                {
+                    if (drawing.DrawingType == eDrawingType.Chart)
+                    {
+                        var chartSerie = drawing.As.Chart.Chart.Series;
+
+                        foreach (var serie in chartSerie)
+                        {
+                            foreach (var col in deletedCols)
+                            {
+                                DeleteColumnFromSeries(ws, serie, col);
+                            }
+                        }
+                    }
+                }
+
+                SaveAndCleanup(p);
+            }
+        }
     }
 }
